@@ -194,56 +194,133 @@ GROUP BY gender;
 
 
 -- We can also group more than one column
+SELECT
+	gender, 
+	maritalstatus,
+	jobtitle
+FROM humanresources.employee
+GROUP BY gender,
+	maritalstatus,
+	jobtitle;
+
+
 
 
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 -- All the AGGREGATES!
+--COUNT(gender) AS Headcount -- 132
+--COUNT(*) AS Headcount -- 131
+
+--COUNT(*) AS Headcount,
+--COUNT(jobtitle) AS JobTitle -- 145
+SELECT
+	gender,
+	COUNT(*) AS Headcount,
+	COUNT(DISTINCT jobtitle) AS uniquejobtitles,
+	SUM(vacationhours) AS total_vacation_hours,
+	AVG(vacationhours) AS average_vacation_hours,
+	CEILING(AVG(vacationhours)) AS ceiling_Vacay_hours,
+	FLOOR(AVG(vacationhours)) AS floor_vacay_hours,
+	ROUND(AVG(vacationhours)) AS rounded_average,
+
+	MAX(sickleavehours) AS max_sick_leave,
+	MIN(sickleavehours) AS min_sick_leave
+FROM humanresources.employee 
+GROUP BY gender;
 
 
 
 -- Q2: Analyse if the marital status of each gender affects the number of vacation hours one will take
 -- A2:
 
+SELECT
+	gender,
+	maritalstatus,
+	AVG(vacationhours) as average_vacation_hours
+FROM humanresources.employee
+GROUP BY 1,2;
+
 
 -- From employee table, ORDER BY hiredate, ASC and DESC
 
 -- hiredate earliest
 
+SELECT *
+FROM humanresources.employee
+ORDER BY hiredate ASC;
+
 
 -- hiredate latest
+
+SELECT *
+FROM humanresources.employee
+ORDER BY hiredate DESC;
 
 
 -- Sort table using two or more values
 
+-- this sorts by both jobtitle and gender.
+SELECT
+	jobtitle,
+	gender
+FROM humanresources.employee
+ORDER BY jobtitle ASC, gender DESC;
+
 
 -- Sorting by Average
 
+SELECT
+	jobtitle,
+	AVG(vacationhours) AS avg_vacay_hours
+FROM humanresources.employee
+GROUP BY jobtitle
+ORDER BY AVG(vacationhours) DESC
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 -- HAVING clause:
 
+SELECT
+	jobtitle,
+	AVG(sickleavehours) AS avg_sick_leave_hours
+FROM humanresources.employee
+GROUP BY jobtitle
+HAVING AVG(sickleavehours) > 50;
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 -- Q3: From the customer table, where customer has a personid and a storeid, find the territory that has higher than 40 customers
 -- A3:
-
+SELECT
+	territoryid,
+	COUNT(*) AS NUmber_of_Customers
+FROM sales.customer
+WHERE personid IS NOT NULL
+	AND storeid IS NOT NULL
+GROUP BY territoryid
+HAVING COUNT(*) > 40;
 
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
--- OFFSET: Using the employee table find the other the other employees except the top 10 oldest employees.
+-- OFFSET: Using the employee table find the other employees except the top 10 oldest employees.
 SELECT *
 FROM humanresources.employee
 ORDER BY birthdate ASC;
+
+SELECT *
+FROM humanresources.employee
+ORDER BY birthdate ASC
+OFFSET 10; -- takes out first 10
+
 
 
 
 -- Q4: From the salesperson table, where customer has a personid and a storeid, find the territory that has higher than 40 customers
 -- A4:
+
 
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -256,6 +333,11 @@ ORDER BY birthdate ASC;
 	3) So people don't think you are a noob
 */
 
+SELECT *
+FROM humanresources.employee
+WHERE gender = 'M'
+LIMIT 10;
+ --WHERE created_date = '2024-10-29'
 
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -273,6 +355,16 @@ FROM production.productsubcategory;
 SELECT *
 FROM production.productcategory;
 
+SELECT
+	product.productid,
+	product.name AS product_name,
+	productcategory.name AS categoryname,
+	productsubcategory.name AS subcategoryname
+FROM production.product AS product -- left table
+INNER JOIN production.productsubcategory AS productsubcategory -- right table
+		ON product.productsubcategoryid = productsubcategory.productsubcategoryid
+INNER JOIN production.productcategory AS productcategory
+		ON productionsubcategory.productcategoryid = productcategory.productcategoryid;
 
 
 -- Let's create a base table in the humanresources schema, where we are able to get each employee's department history and department name
@@ -318,10 +410,44 @@ FROM production.product;
 SELECT *
 FROM sales.salesorderdetail;
 
+SELECT
+	product.productid,
+	product.name AS productname,
+	COALESCE(SUM(salesorderdetail.orderqty), 0) AS totalsalesquantity
+FROM production.product AS product
+LEFT JOIN sales.salesorderdetail AS salesorderdetail
+	ON product.productid = salesorderdetail.productid
+GROUP BY
+	product.productid,
+	product.name
+ORDER BY 
+	COALESCE(SUM(salesorderdetail.orderqty), 0)
+	
 
 
 -- Q5: List all employees and their associated email addresses,  
 -- display their full name and email address.
+
+SELECT *
+FROM humanresources.employee;
+
+SELECT *
+FROM person.person;
+
+SELECT *
+FROM person.emailaddress;
+
+SELECT
+	CONCAT(person.firstname, '', person.middlename, '', person.lastname) AS fullname
+FROM humanresources.employee AS employee
+LEFT JOIN person.person AS person
+	ON employee.businessentityid = person.businessentityid
+LEFT JOIN person.emailaddress AS emailaddress
+	ON employee.businessentityid = emailaddress.businessentityid;
+
+	
+
+
 
 
 -- Retrieve a list of all individual customers id, firstname along with the total number of orders they have placed 
@@ -339,7 +465,10 @@ FROM sales.salesorderheader;
 
 
 -- Q6: Can LEFT JOIN cause duplication? How?
--- A6: 
+-- A6: it depends o--n the relationship that both the tables present for the left join share. 
+-- if it is a one-to-one relationship, the chance of having duplicates is unlikely. 
+-- however, if it is a one-to-many relationship, 
+-- there could be a chance for duplicates to be present.
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -352,7 +481,8 @@ SELECT
     salesorderheader.orderdate AS orderdate, 
     customer.customerid AS customerid, 
     customer.personid AS personid
-FROM sales.salesorderheader AS salesorderheader
+FROM sales.salesorderheader AS salesorderheader;
+R
 
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -397,9 +527,20 @@ ORDER BY employee.employeeid;
 
 -- Write a query to generate all possible combinations of product categories and product models. Show the category name and the model name.
 
-SELECT 
-
+SELECT *
 FROM production.productcategory AS productcategory
+LIMIT 10;
+
+SELECT *
+FROM production.productmodel AS productionmodel
+LIMIT 10;
+
+SELECT
+	productcategory.name as categoryname,
+	productionmodel.name as modelname
+FROM production.productcategory AS productcategory
+CROSS JOIN production.productmodel AS productionmodel
+ORDER BY productcategory.name ASC;
 
 
 -- Each category name is matched to each model name
@@ -408,6 +549,17 @@ FROM production.productcategory AS productcategory
 
 -- UNION, stacking the tables on top of each other without having duplicates
 
+SELECT
+	firstname,
+	lastname,
+	CONCAT(firstname, '', lastname) AS fullname
+FROM person.person
+UNION
+SELECT
+	firstname,
+	lastname,
+	CONCAT(firstname, '', lastname) AS fullname
+FROM person.person;
 
 
 -- Union them together segregating employee and customer
@@ -416,8 +568,31 @@ SELECT *
 FROM person.person;
 
 SELECT *
+FROM humanresources.employee;
+
+SELECT *
 FROM sales.customer;
 
+SELECT
+	firstname,
+	lastname,
+	CONCAT(firstname, '', middlename, '', lastname) AS fullname,
+	'Employee' AS category
+FROM person.person AS person
+INNER JOIN humanresources.employee as employee
+	ON person.businessentityid = employee.businessentityid
+	
+UNION
+
+SELECT
+	firstname,
+	lastname,
+	CONCAT(firstname, '', middlename, '', lastname) AS fullname,
+	'Customer' AS category
+FROM person.person AS person
+INNER JOIN sales.customer AS customer
+	ON person.businessentityid = customer.personid
+WHERE customer.storeid IS NULL;
 
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -447,22 +622,66 @@ FROM purchasing.purchaseorderheader;
 
 -- Getting parts of the date out
 
-SELECT 
+SELECT
+	EXTRACT(YEAR FROM orderdate) AS YEAR,
+	EXTRACT(QUARTER FROM orderdate) AS QUARTER,
+	EXTRACT(MONTH FROM orderdate) AS MONTH,
+	EXTRACT(WEEK FROM orderdate) AS WEEK,
+	EXTRACT(DAY FROM orderdate) AS DAY,
+	EXTRACT(HOUR FROM orderdate) AS HOUR,
+	EXTRACT(MINUTE FROM orderdate) AS MINUTE,
+	EXTRACT(SECOND FROM orderdate) AS SECOND,
 
+	CAST(orderdate AS TIME) AS time, 
+	CAST(orderdate AS DATE) AS date
 FROM sales.salesorderheader;
 
 -- DATETIME manipulations
 
 SELECT
-
+	orderdate AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Singapore' as local_time,
+	CURRENT_DATE AS today,
+	CURRENT_DATE + INTERVAL '10 days' AS add_days,
+	CURRENT_DATE - INTERVAL '10 days' AS minus_days,
+	CURRENT_DATE + INTERVAL '1 month' AS add_month
 FROM sales.salesorderheader
 WHERE territoryid = 1
 	AND EXTRACT(YEAR FROM orderdate) = 2011;
 
 -- Use string functions to format employee names and email addresses
 SELECT
+	CAST(person.businessentityid AS int),
+	CAST(person.businessentityid AS numeric) / 2 AS numeric_id,
+	CAST(person.businessentityid AS decimal) / 2 AS decimal_id,
+	CAST(person.businessentityid AS VARCHAR(100)) AS varchar_id,
+
+	UPPER(person.lastname) as upperlastname,
+	LOWER(person.lastname) as upperlastname,
+	LENGTH(person.firstname) as firstnamelength,
+
+	LEFT(emailaddress.emailaddress, 10) as startemail,
+	RIGHT(emailaddress.emailaddress, 10) as endemail,
+	SUBSTRING(emailaddress.emailaddress, 1, 5) as partialemail,
+	SUBSTRING(emailaddress.emailaddress, 3, 5) as partialemail,
+	emailaddress.emailaddress as oldemail,
+	REPLACE(emailaddress.emailaddress, '@adventure-works.com', '@gmail.com') AS new_email
 
 FROM person.person AS person
+INNER JOIN person.emailaddress AS emailaddress
+	ON person.businessentityid = emailaddress.businessentityid;
+	
+
+/* 
+CAST()
+UPPER()
+LOWER()
+LENGTH()
+LEFT()
+RIGHT()
+SUBSTRING()
+REPLACE()
+CONCAT()
+*/
 
 
 -- From the following table write a query in  SQL to find the  email addresses of employees and groups them by city. 
@@ -485,6 +704,14 @@ SELECT
 	productid,
 	name,
 	listprice,
+	CASE
+		WHEN listprice = 0 THEN 'FREE'
+		WHEN listprice < 50 THEN 'Budget'
+		WHEN listprice BETWEEN 50 AND 1000 THEN 'Mid-Range'
+		ELSE 'Premium'
+	END AS price_category
+FROM production.product
+ORDER BY listprice DESC;
 
 FROM production.product;
 
